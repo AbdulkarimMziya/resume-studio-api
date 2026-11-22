@@ -12,20 +12,25 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 
+import environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Settings and secrets come from environment variables: a .env file locally,
+# the host's environment settings in production. See .env.example for the names.
+env = environ.Env(
+    DEBUG=(bool, False),                    # converts "True"/"False" and defaults to False
+)
+environ.Env.read_env(BASE_DIR / ".env")     # loads .env if it exists (it won't in production)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+SECRET_KEY = env("SECRET_KEY")              # required: ImproperlyConfigured at startup if missing
+DEBUG = env("DEBUG")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-a#vnid66c*+-p05s(re^k(z5@)hauj5&5ia1(gw$j$v%#mr68_'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+# AI provider: the model id is pinned in the environment, so switching models needs no code change
+AI_API_KEY = env("AI_API_KEY")
+AI_MODEL = env("AI_MODEL")
 
 
 # Application definition

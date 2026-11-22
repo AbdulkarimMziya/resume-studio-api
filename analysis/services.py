@@ -1,10 +1,4 @@
-
+from .gemini import get_suggestions
 def analyze_resume(resume_text, job_description):
-    
-    return {
-        "suggestions": [{
-            "original": "Exact resume excerpt",
-            "replacement": "Proposed wording",
-            "reason": "Why it fits this job"
-        }]
-    }
+    suggestions = get_suggestions(resume_text, job_description)   # a list: [{...}, {...}]
+    return {"suggestions": suggestions}
