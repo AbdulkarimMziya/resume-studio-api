@@ -1,4 +1,5 @@
 import pytest
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 
@@ -27,3 +28,11 @@ def fake_gemini(monkeypatch):
         lambda resume_text, job_description: FAKE_SUGGESTIONS,
     )
     return FAKE_SUGGESTIONS
+
+
+@pytest.fixture(autouse=True)
+def clear_throttle_counts():
+    # Rate-limit counts live in the cache. Clear it so no test inherits another test's requests.
+    cache.clear()
+    yield
+    cache.clear()
