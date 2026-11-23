@@ -39,6 +39,8 @@ AI_MODEL = env("AI_MODEL")
 
 # CORS: which browser origins may read this API's responses (exact origins, never "allow all")
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+# Let the browser's JavaScript read Retry-After on a 429, so the UI can say how long to wait
+CORS_EXPOSE_HEADERS = ["Retry-After"]
 
 
 # Application definition
@@ -58,6 +60,18 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Rate limits for the throttles in analysis/throttles.py ("<number>/<sec|min|hour|day>").
+    # Counts live in Django's default in-memory cache: per process, reset on restart or redeploy.
+    # Fine for one Render instance; several instances would need a shared cache such as Redis.
+    "DEFAULT_THROTTLE_RATES": {
+        "analyze_burst": env("THROTTLE_ANALYZE_BURST", default="5/min"),
+        "analyze_daily": env("THROTTLE_ANALYZE_DAILY", default="50/day"),
+        "analyze_global": env("THROTTLE_ANALYZE_GLOBAL", default="500/day"),
+        "extract": env("THROTTLE_EXTRACT", default="20/min"),
+    },
+    # How many proxies sit in front of the app. On Render set NUM_PROXIES=1: the real client IP is
+    # then the last X-Forwarded-For entry (added by Render, can't be faked). Unset locally.
+    "NUM_PROXIES": env.int("NUM_PROXIES", default=None),
 }
 
 SPECTACULAR_SETTINGS = {

@@ -14,10 +14,23 @@ from .serializers import (
 from .services import analyze_resume
 from .documents import extract_text
 from .exceptions import UnreadableFile
+from .throttles import (
+    AnalyzeBurstThrottle,
+    AnalyzeDailyThrottle,
+    AnalyzeGlobalThrottle,
+    ExtractTextThrottle,
+)
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
+TOO_MANY_REQUESTS = OpenApiResponse(
+    description="Too many requests. Wait the number of seconds in the Retry-After header, then try again."
+)
+
 class AnalyzeView(APIView):
+    # Checked before post() runs, so a throttled request never reaches Gemini
+    throttle_classes = [AnalyzeBurstThrottle, AnalyzeDailyThrottle, AnalyzeGlobalThrottle]
+
     @extend_schema(
         request=AnalyzeRequestSerializer,
         responses={
@@ -31,6 +44,7 @@ class AnalyzeView(APIView):
                 description="The AI service couldn't be reached (timeout, outage or quota). "
                 "Try again shortly."
             ),
+            429: TOO_MANY_REQUESTS,
         },
     )
     def post(self, request: Request):
@@ -52,6 +66,7 @@ class ExtractTextView(APIView):
     # Files can't travel in JSON, so this endpoint only accepts multipart form data.
     # Anything else (e.g. a JSON body) gets a 415 Unsupported Media Type from DRF.
     parser_classes = [MultiPartParser]
+    throttle_classes = [ExtractTextThrottle]
 
     @extend_schema(
         request={"multipart/form-data": ExtractTextRequestSerializer},
@@ -62,6 +77,7 @@ class ExtractTextView(APIView):
                 "image-only file, or more text than the 30,000-character resume limit"
             ),
             415: OpenApiResponse(description="The body wasn't multipart/form-data"),
+            429: TOO_MANY_REQUESTS,
         },
     )
     def post(self, request: Request):
