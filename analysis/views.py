@@ -1,10 +1,19 @@
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 
-from .serializers import AnalyzeRequestSerializer, AnalyzeResponseSerializer
+from .serializers import (
+    RESUME_MAX_CHARS,
+    AnalyzeRequestSerializer,
+    AnalyzeResponseSerializer,
+    ExtractTextRequestSerializer,
+    ExtractTextResponseSerializer,
+)
 from .services import analyze_resume
+from .documents import extract_text
+from .exceptions import UnreadableFile
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
@@ -37,3 +46,32 @@ class AnalyzeView(APIView):
             result,
             status=status.HTTP_200_OK,
         )
+
+
+class ExtractTextView(APIView):
+    # Files can't travel in JSON, so this endpoint only accepts multipart form data.
+    # Anything else (e.g. a JSON body) gets a 415 Unsupported Media Type from DRF.
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        request={"multipart/form-data": ExtractTextRequestSerializer},
+        responses={
+            200: ExtractTextResponseSerializer,
+            400: OpenApiResponse(
+                description="No file, wrong type (only .txt, .docx, .pdf), over 2 MB, damaged or "
+                "image-only file, or more text than the 30,000-character resume limit"
+            ),
+            415: OpenApiResponse(description="The body wasn't multipart/form-data"),
+        },
+    )
+    def post(self, request: Request):
+        serializer = ExtractTextRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)              # type and size -> 400 {"file": [...]}
+
+        text = extract_text(serializer.validated_data["file"])  # unreadable -> 400 {"detail": ...}
+        if len(text) > RESUME_MAX_CHARS:
+            raise UnreadableFile(
+                f"That file has {len(text):,} characters of text, more than the "
+                f"{RESUME_MAX_CHARS:,}-character limit. Upload just your resume, or paste a shorter version."
+            )
+        return Response({"text": text}, status=status.HTTP_200_OK)

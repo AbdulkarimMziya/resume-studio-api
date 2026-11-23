@@ -55,6 +55,11 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
+SPECTACULAR_SETTINGS = {
+    # Separate request/response schemas, so a FileField shows as a file picker (binary) in Swagger
+    "COMPONENT_SPLIT_REQUEST": True,
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',   # high up: adds CORS headers to every response, incl. errors
