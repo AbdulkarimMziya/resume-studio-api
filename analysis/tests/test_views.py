@@ -1,5 +1,7 @@
 import pytest
 
+from analysis.exceptions import AIBadOutput, AIUnavailable
+
 
 
 # What to test:
@@ -16,7 +18,7 @@ JOB_TOO_LONG = "a" * 20_001
 @pytest.fixture
 def valid_payload():
     return {
-        "resume_text": "Your resume text",
+        "resume_text": "Junior developer. Helped with testing. Worked on APIs.",  # contains the fake's original
         "job_description": "The job requirements"
     }
 
@@ -74,3 +76,45 @@ def test_schema_lists_the_endpoint(api_client):
     response = api_client.get("/api/schema/")
     assert response.status_code == 200
     assert URL in response.data["paths"]
+
+
+# ---- Milestone 3: AI failures -------------------------------------------------
+# Each test replaces the autouse fake for this test only, by patching the same name.
+FAKE_PATH = "analysis.services.get_suggestions"
+
+
+def test_ai_bad_output_returns_502(api_client, valid_payload, monkeypatch):
+    def fake(resume_text, job_description):
+        raise AIBadOutput()
+
+    monkeypatch.setattr(FAKE_PATH, fake)
+    response = api_client.post(URL, valid_payload, format="json")
+    assert response.status_code == 502
+    assert "detail" in response.data
+
+
+def test_ai_unavailable_returns_503(api_client, valid_payload, monkeypatch):
+    def fake(resume_text, job_description):
+        raise AIUnavailable()
+
+    monkeypatch.setattr(FAKE_PATH, fake)
+    response = api_client.post(URL, valid_payload, format="json")
+    assert response.status_code == 503
+    assert "detail" in response.data
+
+
+def test_original_not_in_resume_returns_502(api_client, valid_payload, monkeypatch):
+    invented = [{"original": "Led a team of 50.", "replacement": "Led a team of 50 engineers.", "reason": "x"}]
+    monkeypatch.setattr(FAKE_PATH, lambda resume_text, job_description: invented)
+    response = api_client.post(URL, valid_payload, format="json")
+    assert response.status_code == 502
+
+
+def test_original_matches_across_line_breaks(api_client, valid_payload, monkeypatch):
+    payload = {**valid_payload, "resume_text": "Junior developer. Helped with\ntesting. Worked on APIs."}
+    suggestion = [{"original": "Helped with testing.", "replacement": "Wrote tests.", "reason": "x"}]
+    monkeypatch.setattr(FAKE_PATH, lambda resume_text, job_description: suggestion)
+    response = api_client.post(URL, payload, format="json")
+    assert response.status_code == 200
+    assert response.data["suggestions"][0]["original"] == "Helped with testing."
+
