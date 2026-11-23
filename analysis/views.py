@@ -13,8 +13,16 @@ class AnalyzeView(APIView):
         request=AnalyzeRequestSerializer,
         responses={
             200: AnalyzeResponseSerializer,
-            400: OpenApiResponse(description="Missing, blank or too long resume_text or job_description")
-        }
+            400: OpenApiResponse(description="Missing, blank or too long resume_text or job_description"),
+            502: OpenApiResponse(
+                description="The AI returned an unusable response (invalid shape, or a suggestion "
+                "that doesn't match the resume). Nothing was wrong with the request; it can be retried."
+            ),
+            503: OpenApiResponse(
+                description="The AI service couldn't be reached (timeout, outage or quota). "
+                "Try again shortly."
+            ),
+        },
     )
     def post(self, request: Request):
         application_data = request.data

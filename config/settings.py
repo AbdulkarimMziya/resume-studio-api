@@ -32,6 +32,9 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 AI_API_KEY = env("AI_API_KEY")
 AI_MODEL = env("AI_MODEL")
 
+# CORS: which browser origins may read this API's responses (exact origins, never "allow all")
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+
 
 # Application definition
 
@@ -42,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'drf_spectacular',
     'analysis',
@@ -53,6 +57,7 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',   # high up: adds CORS headers to every response, incl. errors
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
