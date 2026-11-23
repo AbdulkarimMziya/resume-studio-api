@@ -8,6 +8,7 @@ djangorestframework-stubs==3.18.2
 djangorestframework==3.18.3
 drf-spectacular==0.30.0
 google-genai==3.6.1
+gunicorn==27.0.1
 inflection==0.5.1
 iniconfig==2.3.1
 jsonschema-specifications==2025.9.1

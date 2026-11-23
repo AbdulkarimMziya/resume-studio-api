@@ -28,6 +28,11 @@ SECRET_KEY = env("SECRET_KEY")              # required: ImproperlyConfigured at 
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
+# Render sets RENDER_EXTERNAL_HOSTNAME (e.g. resume-studio-api.onrender.com) on every deploy
+RENDER_EXTERNAL_HOSTNAME = env("RENDER_EXTERNAL_HOSTNAME", default=None)
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 # AI provider: the model id is pinned in the environment, so switching models needs no code change
 AI_API_KEY = env("AI_API_KEY")
 AI_MODEL = env("AI_MODEL")
